@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from typing import Optional
@@ -6,12 +7,11 @@ from PIL import Image
 import io
 import json
 
-
 app = FastAPI()
 
-# 配置 Gemini
+# 👇 让代码从 Render 保险箱自动读取 Key，不再在代码里写死真实密码
 genai.configure(
-    api_key="AQ.Ab8RN6Kku-4I3jyKj6qaDciRVQbVsUUrIDr9N10YnuCx4Q_ksw",
+    api_key=os.environ.get("GEMINI_API_KEY", ""),
     transport="rest"
 )
 
