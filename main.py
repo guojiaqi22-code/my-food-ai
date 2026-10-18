@@ -42,11 +42,30 @@ async def index():
         .danger { color: #dc2626; }
         .warning { color: #d97706; }
         .safe { color: #16a34a; }
+        
         .intake-box { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
         .intake-box h4 { margin: 0 0 4px 0; color: #1d4ed8; font-size: 0.95rem; }
         .intake-box p { margin: 0; font-size: 0.9rem; color: #1e3a8a; line-height: 1.4; }
+
+        /* 功能 1：视觉冲击折算条 */
+        .visual-box { background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
+        .visual-box h4 { margin: 0 0 4px 0; color: #e11d48; font-size: 0.95rem; }
+        .visual-box p { margin: 0; font-size: 0.92rem; color: #9f1239; font-weight: bold; line-height: 1.4; }
+
+        /* 功能 2：代谢债务与运动消耗代价 */
+        .debt-box { background: #fff7ed; border: 1.5px solid #ffedd5; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
+        .debt-box h4 { margin: 0 0 4px 0; color: #c2410c; font-size: 0.95rem; }
+        .debt-box p { margin: 0; font-size: 0.9rem; color: #9a3412; line-height: 1.4; }
+
+        /* 功能 3：荧光排雷标签 */
+        .tag-container { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+        .ingredient-tag { display: block; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; line-height: 1.4; }
+        .tag-red { background: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; }
+        .tag-yellow { background: #fef3c7; border-left: 4px solid #f59e0b; color: #92400e; }
+        .tag-green { background: #dcfce7; border-left: 4px solid #22c55e; color: #166534; }
+
         .substitute-box { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 14px; margin-top: 14px; }
-        .substitute-box h3 { margin: 0 0 8px 0; color: #15803d; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
+        .substitute-box h3 { margin: 0 0 8px 0; color: #15803d; font-size: 1rem; }
         .action-row { display: flex; gap: 10px; margin-top: 16px; }
         .btn-action { flex: 1; padding: 12px 8px; border-radius: 10px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: 0.15s; }
         .btn-action:active { background: #e2e8f0; }
@@ -95,23 +114,40 @@ async def index():
         <div id="scoreBadge" class="score-badge"></div>
         <h3 id="foodName" style="text-align: center; margin: 0 0 10px 0; font-size: 1.3rem;"></h3>
         
-        <!-- 每日最多摄入量推荐 -->
+        <!-- 功能 1：方糖/油脂视觉折算 -->
+        <div class="visual-box">
+            <h4>💥 糖油刺客实物折算：</h4>
+            <p id="visualEquivalent"></p>
+        </div>
+
+        <!-- 建议每日最高摄取上限 -->
         <div class="intake-box">
             <h4>⚖️ 建议每日最高摄取上限：</h4>
             <p id="dailyMaxIntake"></p>
         </div>
 
-        <p><strong>🚨 风险排查：</strong><span id="riskList"></span></p>
+        <!-- 功能 2：代谢债务与运动自救消耗 -->
+        <div class="debt-box">
+            <h4>🏃 代谢债务与物理消耗代价：</h4>
+            <p id="metabolicDebt"></p>
+        </div>
+
+        <!-- 功能 3：高亮排雷重点 -->
+        <div style="margin: 12px 0;">
+            <strong>🚨 配料表深度排雷（红黄绿划重点）：</strong>
+            <div id="riskListTags" class="tag-container"></div>
+        </div>
+
         <p><strong>🫀 代谢影响：</strong><span id="metabolicImpact"></span></p>
         <p><strong>💡 行动建议：</strong><span id="actionAdvice"></span></p>
 
-        <!-- 自动推荐替代方案专区（评分 > 5 分时自动亮起） -->
+        <!-- 自动推荐替代方案专区（评分 > 5 分时自动显示） -->
         <div id="substituteCard" class="substitute-box" style="display: none;">
             <h3>🔄 推荐更健康的低负担替代品</h3>
             <div id="substituteList"></div>
         </div>
 
-        <!-- 底部功能按键：存为图片与复制文字 -->
+        <!-- 底部按键 -->
         <div class="action-row">
             <button class="btn-action" onclick="saveAsImage()">🖼️ 保存长图到相册</button>
             <button class="btn-action" onclick="copyResultText()">📋 复制分析文字</button>
@@ -190,8 +226,26 @@ async def index():
                 badge.innerText = `${data.rating_level} 级 (${data.verdict_title})`;
                 badge.className = 'score-badge ' + (data.rating_level <= 3 ? 'safe' : data.rating_level <= 6 ? 'warning' : 'danger');
 
+                // 功能 1、2 渲染
+                document.getElementById('visualEquivalent').innerText = data.visual_equivalent;
                 document.getElementById('dailyMaxIntake').innerText = data.daily_max_intake;
-                document.getElementById('riskList').innerText = data.risk_ingredients.length > 0 ? data.risk_ingredients.join(', ') : '纯净 / 未检出高危成分';
+                document.getElementById('metabolicDebt').innerText = data.metabolic_debt;
+
+                // 功能 3：高亮排雷标签渲染
+                const tagsContainer = document.getElementById('riskListTags');
+                tagsContainer.innerHTML = '';
+                if (data.ingredient_highlights && data.ingredient_highlights.length > 0) {
+                    data.ingredient_highlights.forEach(item => {
+                        const div = document.createElement('div');
+                        const tagClass = item.level === 'red' ? 'tag-red' : item.level === 'yellow' ? 'tag-yellow' : 'tag-green';
+                        div.className = `ingredient-tag ${tagClass}`;
+                        div.innerHTML = `<strong>${item.name}</strong>：${item.desc}`;
+                        tagsContainer.appendChild(div);
+                    });
+                } else {
+                    tagsContainer.innerHTML = '<div class="ingredient-tag tag-green">成分纯净，未检出隐形糖或劣质油脂</div>';
+                }
+
                 document.getElementById('metabolicImpact').innerText = data.metabolic_analysis;
                 document.getElementById('actionAdvice').innerText = data.action_advice;
 
@@ -213,10 +267,9 @@ async def index():
             }
         }
 
-        // 保存页面结论为长图
+        // 保存长图
         function saveAsImage() {
             const card = document.getElementById('result');
-            // 临时隐藏操作按钮避免出现在截图里
             const actionRow = card.querySelector('.action-row');
             actionRow.style.display = 'none';
 
@@ -236,22 +289,31 @@ async def index():
             });
         }
 
-        // 复制纯文本信息
+        // 复制纯文本
         function copyResultText() {
             if (!lastAnalysisData) return;
             const d = lastAnalysisData;
-            let text = `【AI 代谢健康与控糖审查结论】\n`;
-            text += `食品名称：${d.food_name}\n`;
-            text += `推荐评级：${d.rating_level} 级 (${d.verdict_title})\n`;
-            text += `每日摄入上限：${d.daily_max_intake}\n`;
-            text += `风险成分：${d.risk_ingredients.length > 0 ? d.risk_ingredients.join('、') : '无明显高危成分'}\n`;
-            text += `代谢影响：${d.metabolic_analysis}\n`;
-            text += `行动建议：${d.action_advice}\n`;
+            let text = `【AI 代谢健康与控糖审查结论】\\n`;
+            text += `食品名称：${d.food_name}\\n`;
+            text += `推荐评级：${d.rating_level} 级 (${d.verdict_title})\\n`;
+            text += `实物折算：${d.visual_equivalent}\\n`;
+            text += `每日上限：${d.daily_max_intake}\\n`;
+            text += `代谢债务：${d.metabolic_debt}\\n`;
+            
+            if (d.ingredient_highlights && d.ingredient_highlights.length > 0) {
+                text += `\\n【配料深度排雷】\\n`;
+                d.ingredient_highlights.forEach(item => {
+                    text += `• [${item.level === 'red' ? '高危' : item.level === 'yellow' ? '注意' : '健康'}] ${item.name}：${item.desc}\\n`;
+                });
+            }
+
+            text += `\\n代谢影响：${d.metabolic_analysis}\\n`;
+            text += `行动建议：${d.action_advice}\\n`;
 
             if (d.rating_level > 5 && d.healthy_alternatives && d.healthy_alternatives.length > 0) {
-                text += `\n【推荐健康替代品】\n`;
+                text += `\\n【推荐健康替代品】\\n`;
                 d.healthy_alternatives.forEach(item => {
-                    text += `• ${item.name}：${item.reason}\n`;
+                    text += `• ${item.name}：${item.reason}\\n`;
                 });
             }
 
@@ -283,18 +345,25 @@ async def analyze_api(
 
 审查准则：
 1. 一票否决：反式脂肪/氢化油/植脂末/代可可脂（归为 9~10 级）；
-2. 核心红线：果葡糖浆（高果糖玉米糖浆）、添加蔗糖、高果糖水果；
+2. 核心红线：果葡糖浆（高果糖玉米糖浆）、添加蔗糖、麦芽糊精、高果糖水果；
 3. 打分范围：1~10 级（1 级极力推荐，10 级极力避免/内脏脂肪刺客）；
-4. 【摄入量上限测算】：必须根据用户该性别、年龄、身高、体重及 BMI 的基础代谢负荷，计算并明确给出用户一天摄取该食物的“绝对最高限量”（如：不超过 50g / 半个 / 0g 坚决不碰），并附带一句控制理由。
-5. 【健康替代强制要求】：若最终推荐等级 > 5（即 6~10 级），你必须在 `healthy_alternatives` 中给出 1~3 种同品类、口感接近但低代谢负担的“健康替代品”及理由。若评分 <= 5，则该列表为空。
+4. 【功能1-糖油刺客实物折算】：必须将该食物常规单份摄入量中的添加糖或氧化油脂，直观等价折算为极具画面感的实物。例如：“约等于吃下 11 块标准咖啡方糖的游离糖负荷” 或 “约等于喝下半碗反复煎炸的氧化植物油”。
+5. 【功能2-代谢债务与消耗代价】：必须结合该用户 {weight}kg 的体重大致测算消除其血糖骤升与脂肪酸堆积所需的物理运动代价。例如：“为对冲该份食物的甘油三酯堆积风险，该体重需慢跑 5.2 公里（配速6分）或进行 45 分钟力量训练，且餐后严禁立刻久坐”。
+6. 【功能3-配料深度排雷高亮】：必须深入排查该食物配料中的马甲糖和劣质油。按 red(高危/一票否决/促炎)、yellow(隐藏糖/增稠剂/升糖刺客)、green(纯天然/优质脂肪) 给出 1~4 个成分标签。
+7. 【摄入量上限】：给出每日绝对最高限量与控制理由。
+8. 【健康替代品】：评分 > 5 必须给出 1~3 种健康替代食物及理由。
 
 请严格输出指定 JSON：
 {{
   "food_name": "食品准确名称",
   "rating_level": 1到10的整数,
   "verdict_title": "极力推荐/适量谨慎/极力避免",
-  "daily_max_intake": "结合用户体征的每日摄入上限量描述（例如：不超过 40 克（约半个），若今日已有主食需降为 0）",
-  "risk_ingredients": ["雷区成分1", "雷区成分2"],
+  "visual_equivalent": "强视觉冲击力的折算（如：等于喝下XX或吃下X块方糖）",
+  "daily_max_intake": "结合用户体征的每日摄入上限量描述",
+  "metabolic_debt": "结合用户体重的运动消耗或代谢平抚方案",
+  "ingredient_highlights": [
+    {{"name": "成分名", "desc": "马甲伪装与代谢危害简述", "level": "red或yellow或green"}}
+  ],
   "metabolic_analysis": "对肝脏、胰岛素应激及内脏脂肪的影响简述",
   "action_advice": "摄入建议与频次控制",
   "healthy_alternatives": [
@@ -314,8 +383,4 @@ async def analyze_api(
         content_payload.append("用户未上传图片，请依据该食物的标准配方与常规升糖指数(GI)/果糖含量进行深度审查。")
 
     model = genai.GenerativeModel(
-        model_name="gemini-3.8-flash",
-        generation_config={"response_mime_type": "application/json", "temperature": 0.2}
-    )
-    response = model.generate_content(content_payload)
-    return {"status": "success", "data": json.loads(response.text)}
+        model_name="gemini-3.
