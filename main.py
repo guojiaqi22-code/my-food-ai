@@ -383,4 +383,8 @@ async def analyze_api(
         content_payload.append("用户未上传图片，请依据该食物的标准配方与常规升糖指数(GI)/果糖含量进行深度审查。")
 
     model = genai.GenerativeModel(
-        model_name="gemini-3.
+        model_name="gemini-3.8-flash",
+        generation_config={"response_mime_type": "application/json", "temperature": 0.2}
+    )
+    response = model.generate_content(content_payload)
+    return {"status": "success", "data": json.loads(response.text)}
