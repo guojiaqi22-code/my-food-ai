@@ -84,7 +84,7 @@ async def index():
                 <img id="preview">
             </div>
 
-            <button id="submitBtn" class="btn" style="background: #16a34a; margin-top: 10px; display: none;" onclick="analyze()">🚀 开始 AI 审查</button>
+            <button id="submitBtn" class="btn" style="background: #16a34a; margin-top: 10px; display: none;" onclick="analyze()"> 食物健康审查</button>
             <div id="loading">AI 正在深度审查成分与代谢指标...</div>
         </div>
 
