@@ -20,6 +20,7 @@ async def index():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 代谢健康与控糖审查</title>
+    <!-- 引入 html2canvas 实现长图导出 -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 16px; max-width: 480px; margin: auto; background: #f8fafc; color: #1e293b; }
@@ -28,10 +29,13 @@ async def index():
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 0.82rem; color: #64748b; margin-bottom: 4px; font-weight: 500; }
         input, select { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; font-size: 0.95rem; }
+        
+        /* 5人身份切换栏 */
         .profile-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
         .tab-btn { padding: 8px 3px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; color: #475569; font-size: 0.74rem; font-weight: 600; cursor: pointer; text-align: center; transition: 0.15s; line-height: 1.3; }
         .tab-btn.active { background: #eff6ff; border-color: #0284c7; color: #0284c7; box-shadow: 0 2px 4px rgba(2,132,199,0.12); }
         .role-badge { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; margin-bottom: 10px; }
+
         .btn { width: 100%; padding: 14px; background: #0284c7; color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn:active { background: #0369a1; }
         .divider { text-align: center; margin: 15px 0; position: relative; color: #94a3b8; font-size: 0.85rem; }
@@ -45,34 +49,56 @@ async def index():
         .danger { color: #dc2626; }
         .warning { color: #d97706; }
         .safe { color: #16a34a; }
+        
         .intake-box { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
         .intake-box h4 { margin: 0 0 4px 0; color: #1d4ed8; font-size: 0.95rem; }
         .intake-box p { margin: 0; font-size: 0.9rem; color: #1e3a8a; line-height: 1.4; }
+
+        /* 功能 1：视觉冲击折算条 */
         .visual-box { background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
         .visual-box h4 { margin: 0 0 4px 0; color: #e11d48; font-size: 0.95rem; }
         .visual-box p { margin: 0; font-size: 0.92rem; color: #9f1239; font-weight: bold; line-height: 1.4; }
+
+        /* 功能 2：代谢债务与运动消耗代价 */
         .debt-box { background: #fff7ed; border: 1.5px solid #ffedd5; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
         .debt-box h4 { margin: 0 0 4px 0; color: #c2410c; font-size: 0.95rem; }
         .debt-box p { margin: 0; font-size: 0.9rem; color: #9a3412; line-height: 1.4; }
+
+        /* 功能 3：荧光排雷标签 */
         .tag-container { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
         .ingredient-tag { display: block; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; line-height: 1.4; }
         .tag-red { background: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; }
         .tag-yellow { background: #fef3c7; border-left: 4px solid #f59e0b; color: #92400e; }
         .tag-green { background: #dcfce7; border-left: 4px solid #22c55e; color: #166534; }
+
+        /* 功能 5：同店/同场景安全点餐公式 */
         .menu-box { background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 12px; padding: 14px; margin-top: 14px; }
         .menu-box h3 { margin: 0 0 8px 0; color: #6b21a8; font-size: 0.98rem; }
         .menu-item { font-size: 0.88rem; color: #4c1d95; line-height: 1.5; margin-bottom: 6px; }
+
         .substitute-box { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 14px; margin-top: 14px; }
         .substitute-box h3 { margin: 0 0 8px 0; color: #15803d; font-size: 0.98rem; }
         .sub-item { font-size: 0.88rem; color: #14532d; line-height: 1.5; margin-bottom: 6px; }
+
+        /* 10号功能：社媒极简排版底部水印条 */
+        .social-watermark { display: none; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 16px; color: #94a3b8; font-size: 0.78rem; letter-spacing: 0.5px; }
+
         .action-row { display: flex; gap: 10px; margin-top: 16px; }
         .btn-action { flex: 1; padding: 12px 8px; border-radius: 10px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: 0.15s; }
         .btn-action:active { background: #e2e8f0; }
+
+        /* 保存长图相册浮层 (兜底长按保存) */
+        #imageModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        #modalImg { max-width: 90%; max-height: 75vh; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .modal-tip { color: white; margin-top: 15px; font-size: 0.95rem; font-weight: bold; text-align: center; line-height: 1.5; }
+        .modal-close { margin-top: 12px; padding: 8px 24px; border-radius: 20px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; font-size: 0.85rem; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>👨‍👩‍👦 1. 选择进食者档案 <span style="font-size: 0.75rem; color: #16a34a; font-weight: normal;">(5人独立记忆)</span></h2>
+        
+        <!-- 5个身份切换标签 -->
         <div class="profile-tabs" id="profileTabs">
             <button type="button" class="tab-btn active" onclick="switchSlot(0)" id="tab_0">👦<br><span id="tab_name_0">壮年男性</span></button>
             <button type="button" class="tab-btn" onclick="switchSlot(1)" id="tab_1">👩<br><span id="tab_name_1">壮年女性</span></button>
@@ -80,6 +106,7 @@ async def index():
             <button type="button" class="tab-btn" onclick="switchSlot(3)" id="tab_3">👴<br><span id="tab_name_3">老年男性</span></button>
             <button type="button" class="tab-btn" onclick="switchSlot(4)" id="tab_4">👵<br><span id="tab_name_4">老年女性</span></button>
         </div>
+
         <div style="display: flex; gap: 10px;" class="form-group">
             <div style="flex: 1;">
                 <label>身份称呼 (可自定义)</label>
@@ -95,13 +122,27 @@ async def index():
                 </select>
             </div>
         </div>
+
         <div style="display: flex; gap: 10px;" class="form-group">
-            <div style="flex: 1;"><label>性别</label><select id="gender" onchange="saveCurrentSlot()"><option value="男">男</option><option value="女">女</option></select></div>
-            <div style="flex: 1;"><label>年龄</label><input type="number" id="age" oninput="saveCurrentSlot()"></div>
-            <div style="flex: 1;"><label>身高(cm)</label><input type="number" id="height" oninput="saveCurrentSlot()"></div>
-            <div style="flex: 1;"><label>体重(kg)</label><input type="number" id="weight" oninput="saveCurrentSlot()"></div>
+            <div style="flex: 1;">
+                <label>性别</label>
+                <select id="gender" onchange="saveCurrentSlot()"><option value="男">男</option><option value="女">女</option></select>
+            </div>
+            <div style="flex: 1;">
+                <label>年龄</label>
+                <input type="number" id="age" oninput="saveCurrentSlot()">
+            </div>
+            <div style="flex: 1;">
+                <label>身高(cm)</label>
+                <input type="number" id="height" oninput="saveCurrentSlot()">
+            </div>
+            <div style="flex: 1;">
+                <label>体重(kg)</label>
+                <input type="number" id="weight" oninput="saveCurrentSlot()">
+            </div>
         </div>
     </div>
+
     <div class="card">
         <h2>🍽️ 2. 提供食物信息 (二选一或结合)</h2>
         <div class="form-group">
@@ -118,6 +159,8 @@ async def index():
         <button id="submitBtn" class="btn" style="background: #16a34a; margin-top: 10px; display: none;" onclick="analyze()">开始 AI 审查</button>
         <div id="loading">AI 正在结合该成员体质深度审查...</div>
     </div>
+
+    <!-- 审查结论卡片 (支持导出长图) -->
     <div class="card" id="result">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h2 style="margin: 0;">📊 审查结论</h2>
@@ -125,41 +168,70 @@ async def index():
         </div>
         <div id="scoreBadge" class="score-badge"></div>
         <h3 id="foodName" style="text-align: center; margin: 0 0 10px 0; font-size: 1.3rem;"></h3>
+        
+        <!-- 功能 1：方糖/油脂视觉折算 -->
         <div class="visual-box">
             <h4>💥 糖油刺客实物折算：</h4>
             <p id="visualEquivalent"></p>
         </div>
+
+        <!-- 建议每日最高摄取上限 -->
         <div class="intake-box">
             <h4>⚖️ 专属每日最高摄取上限：</h4>
             <p id="dailyMaxIntake"></p>
         </div>
+
+        <!-- 功能 2：代谢债务与运动自救消耗 -->
         <div class="debt-box">
             <h4>🏃 代谢债务与物理消耗代价：</h4>
             <p id="metabolicDebt"></p>
         </div>
+
+        <!-- 功能 3：高亮排雷重点 -->
         <div style="margin: 12px 0;">
             <strong>🚨 配料表深度排雷（红黄绿划重点）：</strong>
             <div id="riskListTags" class="tag-container"></div>
         </div>
+
         <p style="line-height: 1.5;"><strong>🫀 针对该成员的生理与代谢影响：</strong><span id="metabolicImpact"></span></p>
         <p style="line-height: 1.5;"><strong>💡 进食与补救建议：</strong><span id="actionAdvice"></span></p>
+
+        <!-- 功能 5：同店/同场景健康点餐公式 -->
         <div id="sameStoreCard" class="menu-box" style="display: none;">
             <h3>🍱 同店 / 同场景“安全点餐公式”</h3>
             <div id="sameStoreList"></div>
         </div>
+
+        <!-- 自动推荐替代方案专区（评分 > 5 分时自动显示） -->
         <div id="substituteCard" class="substitute-box" style="display: none;">
             <h3>🔄 推荐更健康的低负担替代品</h3>
             <div id="substituteList"></div>
         </div>
+
+        <!-- 10号功能：社媒打卡卡片专属水印底部 -->
+        <div id="socialWatermark" class="social-watermark">
+            📌 AI 代谢健康与控糖审查 · 个人数字化饮食审计
+        </div>
+
+        <!-- 底部按键 -->
         <div class="action-row">
             <button class="btn-action" onclick="saveAsImage()">🖼️ 保存长图到相册</button>
             <button class="btn-action" onclick="copyResultText()">📋 复制分析文字</button>
         </div>
     </div>
+
+    <!-- 手机相册保存浮层 -->
+    <div id="imageModal" onclick="closeModal()">
+        <img id="modalImg" alt="长图结论" onclick="event.stopPropagation()">
+        <div class="modal-tip">👆 长按上方图片即可直接【存储图像】到手机相册</div>
+        <button class="modal-close" onclick="closeModal()">关闭</button>
+    </div>
+
     <script>
         let selectedFile = null;
         let lastAnalysisData = null;
         let currentSlot = 0;
+
         const defaultProfiles = [
             { name: "壮年男性", role: "成人控糖与护肝增肌", gender: "男", age: 40, height: 180, weight: 75 },
             { name: "壮年女性", role: "女性抗糖抗炎与轻体", gender: "女", age: 36, height: 165, weight: 52 },
@@ -167,13 +239,17 @@ async def index():
             { name: "老年男性", role: "老龄长辈(稳血糖/护血管/控钠与反式脂肪)", gender: "男", age: 68, height: 170, weight: 68 },
             { name: "老年女性", role: "老龄长辈(稳血糖/护血管/控钠与反式脂肪)", gender: "女", age: 66, height: 160, weight: 58 }
         ];
+
         let familyProfiles = [];
+
         window.onload = function() {
             const saved = localStorage.getItem('family_profiles_v2');
             if (saved) {
                 try {
                     familyProfiles = JSON.parse(saved);
-                    if (!Array.isArray(familyProfiles) || familyProfiles.length < 5) familyProfiles = JSON.parse(JSON.stringify(defaultProfiles));
+                    if (!Array.isArray(familyProfiles) || familyProfiles.length < 5) {
+                        familyProfiles = JSON.parse(JSON.stringify(defaultProfiles));
+                    }
                 } catch(e) {
                     familyProfiles = JSON.parse(JSON.stringify(defaultProfiles));
                 }
@@ -184,12 +260,16 @@ async def index():
             updateTabNames();
             switchSlot(isNaN(lastSlot) ? 0 : lastSlot);
         };
+
         function updateTabNames() {
             for (let i = 0; i < 5; i++) {
                 const el = document.getElementById('tab_name_' + i);
-                if (el && familyProfiles[i]) el.innerText = familyProfiles[i].name || defaultProfiles[i].name;
+                if (el && familyProfiles[i]) {
+                    el.innerText = familyProfiles[i].name || defaultProfiles[i].name;
+                }
             }
         }
+
         function switchSlot(index) {
             currentSlot = index;
             localStorage.setItem('last_active_slot_v2', index.toString());
@@ -206,6 +286,7 @@ async def index():
             document.getElementById('height').value = p.height || defaultProfiles[index].height;
             document.getElementById('weight').value = p.weight || defaultProfiles[index].weight;
         }
+
         function saveCurrentSlot() {
             familyProfiles[currentSlot] = {
                 name: document.getElementById('memberName').value.trim() || defaultProfiles[currentSlot].name,
@@ -218,6 +299,7 @@ async def index():
             localStorage.setItem('family_profiles_v2', JSON.stringify(familyProfiles));
             updateTabNames();
         }
+
         function handleFile(input) {
             if (input.files && input.files[0]) {
                 selectedFile = input.files[0];
@@ -231,14 +313,20 @@ async def index():
                 reader.readAsDataURL(selectedFile);
             }
         }
+
         function toggleSubmitBtn() {
             const textVal = document.getElementById('foodText').value.trim();
             const btn = document.getElementById('submitBtn');
             btn.style.display = (selectedFile || textVal) ? 'block' : 'none';
         }
+
         async function analyze() {
             const foodText = document.getElementById('foodText').value.trim();
-            if (!selectedFile && !foodText) { alert('请至少上传一张照片或输入食物名称！'); return; }
+            if (!selectedFile && !foodText) {
+                alert('请至少上传一张照片或输入食物名称！');
+                return;
+            }
+
             document.getElementById('loading').style.display = 'block';
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('result').style.display = 'none';
@@ -272,6 +360,7 @@ async def index():
                 document.getElementById('dailyMaxIntake').innerText = data.daily_max_intake || '按常规膳食摄入即可';
                 document.getElementById('metabolicDebt').innerText = data.metabolic_debt || '日常活动即可正常代谢';
 
+                // 高亮排雷标签渲染
                 const tagsContainer = document.getElementById('riskListTags');
                 tagsContainer.innerHTML = '';
                 if (data.ingredient_highlights && data.ingredient_highlights.length > 0) {
@@ -290,6 +379,7 @@ async def index():
                 document.getElementById('metabolicImpact').innerText = data.metabolic_analysis;
                 document.getElementById('actionAdvice').innerText = data.action_advice;
 
+                // 同店/同场景安全点餐公式渲染
                 const storeCard = document.getElementById('sameStoreCard');
                 if (data.same_store_safe_combos && data.same_store_safe_combos.length > 0) {
                     document.getElementById('sameStoreList').innerHTML = data.same_store_safe_combos.map(item => {
@@ -302,6 +392,7 @@ async def index():
                     storeCard.style.display = 'none';
                 }
 
+                // 健康替代品渲染
                 const subCard = document.getElementById('substituteCard');
                 if (data.rating_level > 5 && data.healthy_alternatives && data.healthy_alternatives.length > 0) {
                     document.getElementById('substituteList').innerHTML = data.healthy_alternatives.map(item => {
@@ -323,55 +414,112 @@ async def index():
                 document.getElementById('submitBtn').disabled = false;
             }
         }
-        function saveAsImage() {
+
+        // 10号功能 + 移动端相册一键保存机制
+        async function saveAsImage() {
             const card = document.getElementById('result');
             const actionRow = card.querySelector('.action-row');
+            const watermark = document.getElementById('socialWatermark');
+            
             actionRow.style.display = 'none';
-            html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
+            watermark.style.display = 'block'; // 打开小红书社媒风水印卡片
+
+            try {
+                const canvas = await html2canvas(card, {
+                    scale: 3, // 3倍高清分辨率，文字与色块极其锐利
+                    backgroundColor: '#ffffff',
+                    useCORS: true
+                });
+
                 actionRow.style.display = 'flex';
-                const link = document.createElement('a');
-                const mName = lastAnalysisData && lastAnalysisData._memberName ? lastAnalysisData._memberName : '';
+                watermark.style.display = 'none';
+
+                const mName = lastAnalysisData && lastAnalysisData._memberName ? lastAnalysisData._memberName : '成员';
                 const fName = lastAnalysisData ? lastAnalysisData.food_name : '食物';
-                link.download = `${mName}_${fName}_健康审查结论.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            }).catch(() => {
+                const fileName = `${mName}_${fName}_代谢审查便签.png`;
+
+                // 核心移动端适配：优先尝试 Web Share API（可一键存入手机相册）
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], fileName, { type: 'image/png' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: `${fName} 控糖审查卡片`,
+                                text: `AI代谢审查结论：${fName}`
+                            });
+                            return; // 唤起系统分享面板成功（iOS/Android 用户在面板中点击“存储图像”即可进相册）
+                        } catch (shareErr) {
+                            if (shareErr.name === 'AbortError') return; // 用户手动取消了分享面板
+                        }
+                    }
+
+                    // 兜底方案（微信内或 PC 浏览器）：
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    
+                    if (isMobile) {
+                        // 手机端弹出全屏长按保存遮罩
+                        document.getElementById('modalImg').src = dataUrl;
+                        document.getElementById('imageModal').style.display = 'flex';
+                    } else {
+                        // 桌面端直接触发无感文件下载
+                        const link = document.createElement('a');
+                        link.download = fileName;
+                        link.href = dataUrl;
+                        link.click();
+                    }
+                }, 'image/png');
+
+            } catch(e) {
                 actionRow.style.display = 'flex';
-                alert('截图生成失败，请稍后重试');
-            });
+                watermark.style.display = 'none';
+                alert('生成图片失败，请重试');
+            }
         }
+
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        // 复制纯文本
         function copyResultText() {
             if (!lastAnalysisData) return;
             const d = lastAnalysisData;
-            let text = `【AI 代谢健康与控糖审查结论】\n`;
-            text += `审查对象：${d._memberName || '默认成员'}\n`;
-            text += `食品名称：${d.food_name}\n`;
-            text += `推荐评级：${d.rating_level} 级 (${d.verdict_title})\n`;
-            text += `实物折算：${d.visual_equivalent}\n`;
-            text += `每日上限：${d.daily_max_intake}\n`;
-            text += `代谢债务：${d.metabolic_debt}\n`;
+            let text = `【AI 代谢健康与控糖审查结论】\\n`;
+            text += `审查对象：${d._memberName || '默认成员'}\\n`;
+            text += `食品名称：${d.food_name}\\n`;
+            text += `推荐评级：${d.rating_level} 级 (${d.verdict_title})\\n`;
+            text += `实物折算：${d.visual_equivalent}\\n`;
+            text += `每日上限：${d.daily_max_intake}\\n`;
+            text += `代谢债务：${d.metabolic_debt}\\n`;
+            
             if (d.ingredient_highlights && d.ingredient_highlights.length > 0) {
-                text += `\n【配料深度排雷】\n`;
+                text += `\\n【配料深度排雷】\\n`;
                 d.ingredient_highlights.forEach(item => {
                     const desc = item.desc || item.reason || '';
-                    text += `• [${item.level === 'red' ? '高危' : item.level === 'yellow' ? '注意' : '健康'}] ${item.name}：${desc}\n`;
+                    text += `• [${item.level === 'red' ? '高危' : item.level === 'yellow' ? '注意' : '健康'}] ${item.name}：${desc}\\n`;
                 });
             }
-            text += `\n生理与代谢影响：${d.metabolic_analysis}\n`;
-            text += `行动建议：${d.action_advice}\n`;
+
+            text += `\\n生理与代谢影响：${d.metabolic_analysis}\\n`;
+            text += `行动建议：${d.action_advice}\\n`;
+
             if (d.same_store_safe_combos && d.same_store_safe_combos.length > 0) {
-                text += `\n【同店/同场景安全点餐公式】\n`;
+                text += `\\n【同店/同场景安全点餐公式】\\n`;
                 d.same_store_safe_combos.forEach(item => {
-                    text += `• ${item.combo || item.name}：${item.why || item.reason || ''}\n`;
+                    text += `• ${item.combo || item.name}：${item.why || item.reason || ''}\\n`;
                 });
             }
+
             if (d.rating_level > 5 && d.healthy_alternatives && d.healthy_alternatives.length > 0) {
-                text += `\n【推荐健康替代品】\n`;
+                text += `\\n【推荐健康替代品】\\n`;
                 d.healthy_alternatives.forEach(item => {
                     const reason = item.reason || item.desc || item.why || '';
-                    text += `• ${item.name}：${reason}\n`;
+                    text += `• ${item.name}：${reason}\\n`;
                 });
             }
+
             navigator.clipboard.writeText(text).then(() => {
                 alert('✅ 审查结果已复制到剪贴板！');
             }).catch(() => {
