@@ -107,4 +107,434 @@ async def index():
                 <label>生理阶段与审查侧重</label>
                 <select id="roleFocus" onchange="saveCurrentSlot()">
                     <option value="成人控糖与护肝增肌">成人控糖 / 护肝增肌</option>
-                    <option value="女性抗糖抗炎与轻体">女性抗糖 / 抗炎轻体</
+                    <option value="女性抗糖抗炎与轻体">女性抗糖 / 抗炎轻体</option>
+                    <option value="生长发育期青少年(严查添加剂与高果糖，重钙与蛋白)">发育期青少年 (促生长/严查添加剂)</option>
+                    <option value="老龄长辈(稳血糖/护血管/控钠与反式脂肪)">老龄长辈 (稳血糖/护血管/控盐)</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;" class="form-group">
+            <div style="flex: 1;">
+                <label>性别</label>
+                <select id="gender" onchange="saveCurrentSlot()"><option value="男">男</option><option value="女">女</option></select>
+            </div>
+            <div style="flex: 1;">
+                <label>年龄</label>
+                <input type="number" id="age" oninput="saveCurrentSlot()">
+            </div>
+            <div style="flex: 1;">
+                <label>身高(cm)</label>
+                <input type="number" id="height" oninput="saveCurrentSlot()">
+            </div>
+            <div style="flex: 1;">
+                <label>体重(kg)</label>
+                <input type="number" id="weight" oninput="saveCurrentSlot()">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🍽️ 2. 提供食物信息 (二选一或结合)</h2>
+        <div class="form-group">
+            <label>方式 A：输入食物、品牌或餐厅名称</label>
+            <input type="text" id="foodText" placeholder="如：麦当劳薯条、提子、霸王茶姬伯牙绝弦" oninput="toggleSubmitBtn()">
+        </div>
+        <div class="divider">或</div>
+        <div class="form-group">
+            <label>方式 B：拍摄实物或配料表图片</label>
+            <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFile(this)">
+            <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;" onclick="document.getElementById('fileInput').click()">📸 拍照 / 从相册选择</button>
+            <img id="preview">
+        </div>
+        <button id="submitBtn" class="btn" style="background: #16a34a; margin-top: 10px; display: none;" onclick="analyze()">开始 AI 审查</button>
+        <div id="loading">AI 正在结合该成员体质深度审查...</div>
+    </div>
+
+    <!-- 审查结论卡片 (支持导出长图) -->
+    <div class="card" id="result">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0;">📊 审查结论</h2>
+            <span id="targetMemberBadge" class="role-badge" style="margin: 0;"></span>
+        </div>
+        <div id="scoreBadge" class="score-badge"></div>
+        <h3 id="foodName" style="text-align: center; margin: 0 0 10px 0; font-size: 1.3rem;"></h3>
+        
+        <!-- 功能 1：方糖/油脂视觉折算 -->
+        <div class="visual-box">
+            <h4>💥 糖油刺客实物折算：</h4>
+            <p id="visualEquivalent"></p>
+        </div>
+
+        <!-- 建议每日最高摄取上限 -->
+        <div class="intake-box">
+            <h4>⚖️ 专属每日最高摄取上限：</h4>
+            <p id="dailyMaxIntake"></p>
+        </div>
+
+        <!-- 功能 2：代谢债务与运动自救消耗 -->
+        <div class="debt-box">
+            <h4>🏃 代谢债务与物理消耗代价：</h4>
+            <p id="metabolicDebt"></p>
+        </div>
+
+        <!-- 功能 3：高亮排雷重点 -->
+        <div style="margin: 12px 0;">
+            <strong>🚨 配料表深度排雷（红黄绿划重点）：</strong>
+            <div id="riskListTags" class="tag-container"></div>
+        </div>
+
+        <p style="line-height: 1.5;"><strong>🫀 针对该成员的生理与代谢影响：</strong><span id="metabolicImpact"></span></p>
+        <p style="line-height: 1.5;"><strong>💡 进食与补救建议：</strong><span id="actionAdvice"></span></p>
+
+        <!-- 功能 5：同店/同场景健康点餐公式 -->
+        <div id="sameStoreCard" class="menu-box" style="display: none;">
+            <h3>🍱 同店 / 同场景“安全点餐公式”</h3>
+            <div id="sameStoreList"></div>
+        </div>
+
+        <!-- 自动推荐替代方案专区（评分 > 5 分时自动显示） -->
+        <div id="substituteCard" class="substitute-box" style="display: none;">
+            <h3>🔄 推荐更健康的低负担替代品</h3>
+            <div id="substituteList"></div>
+        </div>
+
+        <!-- 底部按键 -->
+        <div class="action-row">
+            <button class="btn-action" onclick="saveAsImage()">🖼️ 保存长图到相册</button>
+            <button class="btn-action" onclick="copyResultText()">📋 复制分析文字</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let lastAnalysisData = null;
+        let currentSlot = 0;
+
+        // 预设 5 个新身份档案
+        const defaultProfiles = [
+            { name: "壮年男性", role: "成人控糖与护肝增肌", gender: "男", age: 40, height: 180, weight: 75 },
+            { name: "壮年女性", role: "女性抗糖抗炎与轻体", gender: "女", age: 36, height: 165, weight: 52 },
+            { name: "青少年", role: "生长发育期青少年(严查添加剂与高果糖，重钙与蛋白)", gender: "男", age: 14, height: 165, weight: 52 },
+            { name: "老年男性", role: "老龄长辈(稳血糖/护血管/控钠与反式脂肪)", gender: "男", age: 68, height: 170, weight: 68 },
+            { name: "老年女性", role: "老龄长辈(稳血糖/护血管/控钠与反式脂肪)", gender: "女", age: 66, height: 160, weight: 58 }
+        ];
+
+        let familyProfiles = [];
+
+        window.onload = function() {
+            const saved = localStorage.getItem('family_profiles_v2');
+            if (saved) {
+                try {
+                    familyProfiles = JSON.parse(saved);
+                    if (!Array.isArray(familyProfiles) || familyProfiles.length < 5) {
+                        familyProfiles = JSON.parse(JSON.stringify(defaultProfiles));
+                    }
+                } catch(e) {
+                    familyProfiles = JSON.parse(JSON.stringify(defaultProfiles));
+                }
+            } else {
+                familyProfiles = JSON.parse(JSON.stringify(defaultProfiles));
+            }
+            const lastSlot = parseInt(localStorage.getItem('last_active_slot_v2') || '0', 10);
+            updateTabNames();
+            switchSlot(isNaN(lastSlot) ? 0 : lastSlot);
+        };
+
+        function updateTabNames() {
+            for (let i = 0; i < 5; i++) {
+                const el = document.getElementById('tab_name_' + i);
+                if (el && familyProfiles[i]) {
+                    el.innerText = familyProfiles[i].name || defaultProfiles[i].name;
+                }
+            }
+        }
+
+        function switchSlot(index) {
+            currentSlot = index;
+            localStorage.setItem('last_active_slot_v2', index.toString());
+            for (let i = 0; i < 5; i++) {
+                const btn = document.getElementById('tab_' + i);
+                if (i === index) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }
+            const p = familyProfiles[index];
+            document.getElementById('memberName').value = p.name || defaultProfiles[index].name;
+            document.getElementById('roleFocus').value = p.role || defaultProfiles[index].role;
+            document.getElementById('gender').value = p.gender || defaultProfiles[index].gender;
+            document.getElementById('age').value = p.age || defaultProfiles[index].age;
+            document.getElementById('height').value = p.height || defaultProfiles[index].height;
+            document.getElementById('weight').value = p.weight || defaultProfiles[index].weight;
+        }
+
+        function saveCurrentSlot() {
+            familyProfiles[currentSlot] = {
+                name: document.getElementById('memberName').value.trim() || defaultProfiles[currentSlot].name,
+                role: document.getElementById('roleFocus').value,
+                gender: document.getElementById('gender').value,
+                age: document.getElementById('age').value,
+                height: document.getElementById('height').value,
+                weight: document.getElementById('weight').value
+            };
+            localStorage.setItem('family_profiles_v2', JSON.stringify(familyProfiles));
+            updateTabNames();
+        }
+
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                selectedFile = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('preview');
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    toggleSubmitBtn();
+                }
+                reader.readAsDataURL(selectedFile);
+            }
+        }
+
+        function toggleSubmitBtn() {
+            const textVal = document.getElementById('foodText').value.trim();
+            const btn = document.getElementById('submitBtn');
+            btn.style.display = (selectedFile || textVal) ? 'block' : 'none';
+        }
+
+        async function analyze() {
+            const foodText = document.getElementById('foodText').value.trim();
+            if (!selectedFile && !foodText) {
+                alert('请至少上传一张照片或输入食物名称！');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('result').style.display = 'none';
+
+            const currentMember = familyProfiles[currentSlot];
+            const formData = new FormData();
+            formData.append('member_name', currentMember.name);
+            formData.append('role_focus', currentMember.role);
+            formData.append('gender', currentMember.gender);
+            formData.append('age', currentMember.age);
+            formData.append('height', currentMember.height);
+            formData.append('weight', currentMember.weight);
+            if (foodText) formData.append('food_name_input', foodText);
+            if (selectedFile) formData.append('file', selectedFile);
+
+            try {
+                const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+                const resp = await res.json();
+                const data = resp.data;
+                lastAnalysisData = data;
+                lastAnalysisData._memberName = currentMember.name;
+
+                document.getElementById('targetMemberBadge').innerText = `👤 审查对象：${currentMember.name} (${currentMember.age}岁)`;
+                document.getElementById('foodName').innerText = data.food_name;
+                const badge = document.getElementById('scoreBadge');
+                badge.innerText = `${data.rating_level} 级 (${data.verdict_title})`;
+                badge.className = 'score-badge ' + (data.rating_level <= 3 ? 'safe' : data.rating_level <= 6 ? 'warning' : 'danger');
+
+                document.getElementById('visualEquivalent').innerText = data.visual_equivalent || '无明显游离糖油折算风险';
+                document.getElementById('dailyMaxIntake').innerText = data.daily_max_intake || '按常规膳食摄入即可';
+                document.getElementById('metabolicDebt').innerText = data.metabolic_debt || '日常活动即可正常代谢';
+
+                // 高亮排雷标签渲染
+                const tagsContainer = document.getElementById('riskListTags');
+                tagsContainer.innerHTML = '';
+                if (data.ingredient_highlights && data.ingredient_highlights.length > 0) {
+                    data.ingredient_highlights.forEach(item => {
+                        const div = document.createElement('div');
+                        const tagClass = item.level === 'red' ? 'tag-red' : item.level === 'yellow' ? 'tag-yellow' : 'tag-green';
+                        const itemDesc = item.desc || item.reason || item.description || '';
+                        div.className = `ingredient-tag ${tagClass}`;
+                        div.innerHTML = `<strong>${item.name}</strong>：${itemDesc}`;
+                        tagsContainer.appendChild(div);
+                    });
+                } else {
+                    tagsContainer.innerHTML = '<div class="ingredient-tag tag-green">成分纯净，未检出隐形糖或劣质油脂</div>';
+                }
+
+                document.getElementById('metabolicImpact').innerText = data.metabolic_analysis;
+                document.getElementById('actionAdvice').innerText = data.action_advice;
+
+                // 同店/同场景安全点餐公式渲染
+                const storeCard = document.getElementById('sameStoreCard');
+                if (data.same_store_safe_combos && data.same_store_safe_combos.length > 0) {
+                    document.getElementById('sameStoreList').innerHTML = data.same_store_safe_combos.map(item => {
+                        const comboName = item.combo || item.name || '推荐搭配';
+                        const comboWhy = item.why || item.reason || item.desc || '';
+                        return `<div class="menu-item">• <strong>${comboName}</strong>：${comboWhy}</div>`;
+                    }).join('');
+                    storeCard.style.display = 'block';
+                } else {
+                    storeCard.style.display = 'none';
+                }
+
+                // 健康替代品渲染
+                const subCard = document.getElementById('substituteCard');
+                if (data.rating_level > 5 && data.healthy_alternatives && data.healthy_alternatives.length > 0) {
+                    document.getElementById('substituteList').innerHTML = data.healthy_alternatives.map(item => {
+                        const altName = item.name || item.food || '替代方案';
+                        const altReason = item.reason || item.desc || item.why || item.description || '低升糖、低代谢负担';
+                        return `<div class="sub-item">• <strong>${altName}</strong>：${altReason}</div>`;
+                    }).join('');
+                    subCard.style.display = 'block';
+                } else {
+                    subCard.style.display = 'none';
+                }
+
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+            } catch(e) {
+                alert('分析失败，请检查网络或重试');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        // 保存长图
+        function saveAsImage() {
+            const card = document.getElementById('result');
+            const actionRow = card.querySelector('.action-row');
+            actionRow.style.display = 'none';
+
+            html2canvas(card, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true
+            }).then(canvas => {
+                actionRow.style.display = 'flex';
+                const link = document.createElement('a');
+                const mName = lastAnalysisData && lastAnalysisData._memberName ? lastAnalysisData._memberName : '';
+                const fName = lastAnalysisData ? lastAnalysisData.food_name : '食物';
+                link.download = `${mName}_${fName}_健康审查结论.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(() => {
+                actionRow.style.display = 'flex';
+                alert('截图生成失败，请稍后重试');
+            });
+        }
+
+        // 复制纯文本
+        function copyResultText() {
+            if (!lastAnalysisData) return;
+            const d = lastAnalysisData;
+            let text = `【AI 代谢健康与控糖审查结论】\\n`;
+            text += `审查对象：${d._memberName || '默认成员'}\\n`;
+            text += `食品名称：${d.food_name}\\n`;
+            text += `推荐评级：${d.rating_level} 级 (${d.verdict_title})\\n`;
+            text += `实物折算：${d.visual_equivalent}\\n`;
+            text += `每日上限：${d.daily_max_intake}\\n`;
+            text += `代谢债务：${d.metabolic_debt}\\n`;
+            
+            if (d.ingredient_highlights && d.ingredient_highlights.length > 0) {
+                text += `\\n【配料深度排雷】\\n`;
+                d.ingredient_highlights.forEach(item => {
+                    const desc = item.desc || item.reason || '';
+                    text += `• [${item.level === 'red' ? '高危' : item.level === 'yellow' ? '注意' : '健康'}] ${item.name}：${desc}\\n`;
+                });
+            }
+
+            text += `\\n生理与代谢影响：${d.metabolic_analysis}\\n`;
+            text += `行动建议：${d.action_advice}\\n`;
+
+            if (d.same_store_safe_combos && d.same_store_safe_combos.length > 0) {
+                text += `\\n【同店/同场景安全点餐公式】\\n`;
+                d.same_store_safe_combos.forEach(item => {
+                    text += `• ${item.combo || item.name}：${item.why || item.reason || ''}\\n`;
+                });
+            }
+
+            if (d.rating_level > 5 && d.healthy_alternatives && d.healthy_alternatives.length > 0) {
+                text += `\\n【推荐健康替代品】\\n`;
+                d.healthy_alternatives.forEach(item => {
+                    const reason = item.reason || item.desc || item.why || '';
+                    text += `• ${item.name}：${reason}\\n`;
+                });
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 审查结果已复制到剪贴板！');
+            }).catch(() => {
+                alert('复制失败，请手动长按复制');
+            });
+        }
+    </script>
+</body>
+</html>
+"""
+
+@app.post("/api/analyze")
+async def analyze_api(
+    member_name: str = Form("壮年男性"),
+    role_focus: str = Form("成人控糖与护肝增肌"),
+    gender: str = Form(...),
+    age: int = Form(...),
+    height: float = Form(...),
+    weight: float = Form(...),
+    food_name_input: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None)
+):
+    h_m = height / 100.0
+    bmi = round(weight / (h_m * h_m), 1)
+
+    system_prompt = f"""你是一位严格的临床营养、控糖与代谢健康审查专家。
+当前进食者档案：
+- 称呼：{member_name}
+- 核心生理阶段与目标：{role_focus}
+- 体征数据：性别 {gender}，年龄 {age}岁，身高 {height}cm，体重 {weight}kg，BMI {bmi}。
+
+审查准则：
+1. 一票否决：反式脂肪/氢化植物油/植脂末/代可可脂/起酥油（直接归为 9~10 级）；
+2. 核心红线：果葡糖浆（高果糖玉米糖浆）、添加蔗糖、麦芽糊精、高游离果糖；
+3. 【人群定制化审查】：
+   - 若为“青少年”：严查人工合成色素、防腐剂（苯甲酸钠等）、隐形咖啡因、高果糖（抑制夜间生长激素峰值及竞争性干扰钙磷吸收），评估其对骨骼生长、注意力及性早熟/肥胖的影响；
+   - 若为“老年男性/老年女性”：严查高升糖（GI/GL）、高钠隐形盐、氧化劣质油脂与反式脂肪，重点防范餐后血糖尖锐脉冲、血管内皮炎症、血脂与尿酸负担；
+   - 若为“壮年男性/壮年女性”：重点评估肝脏果糖新生脂肪、胰岛素抵抗、内脏脂肪堆积、抗炎轻体及肌肉合成效率。
+4. 【糖油刺客实物折算】：将该食物单份摄入量中的添加糖或氧化油脂，折算为直观实物（如“约等于吃下 X 块方糖 / 喝下 X 瓷勺反复煎炸氧化油”）。
+5. 【代谢债务与消耗代价】：结合该成员 {age}岁、{weight}kg 的体能特点，给出适合该年龄段的运动消耗对冲方案（青少年侧重弹跳/篮球/摸高，壮年侧重抗阻深蹲/配速跑，老年侧重餐后快走/靠墙静蹲/八段锦）。
+6. 【配料深度排雷高亮】：按 red(高危/促炎/一票否决)、yellow(隐形糖/升糖刺客/添加剂)、green(天然优质营养) 给出 2~4 个核心成分剖析，字段名严格为 name、desc、level。
+7. 【同店/同场景安全点餐公式】：若食物涉及连锁餐饮/茶饮/便利店，必须在 `same_store_safe_combos` 中给出 1~2 套低升糖高蛋白安全点餐组合及理由；若为普通生鲜食材（如“提子”），给出黄金搭配控糖吃法。
+8. 【健康替代品】：评分 > 5 时，必须在 `healthy_alternatives` 中给出 2 种适合该成员的低负担替代食物，字段名严格为 name 和 reason。
+
+请严格输出以下 JSON 格式：
+{{
+  "food_name": "食品准确名称",
+  "rating_level": 1到10的整数,
+  "verdict_title": "极力推荐/适量谨慎/极力避免",
+  "visual_equivalent": "强视觉冲击力的实物折算",
+  "daily_max_intake": "针对该成员({member_name}, {age}岁)的每日最高摄入上限与控制理由",
+  "metabolic_debt": "贴合该成员年龄与体重({weight}kg)的运动消耗或餐后对冲方案",
+  "ingredient_highlights": [
+    {{"name": "成分名", "desc": "马甲伪装与对该成员的具体危害或益处", "level": "red或yellow或green"}}
+  ],
+  "metabolic_analysis": "针对该成员生理阶段（青少年生长/老年血管血糖/壮年肝脏脂肪）的深度影响剖析",
+  "action_advice": "具体的进食顺序、时间窗口或紧急补救措施",
+  "same_store_safe_combos": [
+    {{"combo": "同店安全点餐公式或黄金搭配吃法", "why": "为什么这套组合能稳住血糖与代谢"}}
+  ],
+  "healthy_alternatives": [
+    {{"name": "替代食物名称", "reason": "为什么更适合该家庭成员食用"}}
+  ]
+}}"""
+
+    content_payload = [system_prompt]
+    if food_name_input:
+        content_payload.append(f"【用户直接输入的食物或品牌名称】：{food_name_input}")
+    if file and file.filename:
+        image_bytes = await file.read()
+        image = Image.open(io.BytesIO(image_bytes))
+        content_payload.append(image)
+        content_payload.append("请结合上传的包装/配料表/食物照片进行严格审查。")
+    else:
+        content_payload.append("用户未上传图片，请依据该食物/餐厅的标准配方与常规升糖指数(GI)/果糖及油脂含量进行深度审查。")
+
+    model = genai.GenerativeModel(
+        model_name="gemini-3.8-flash",
+        generation_config={"response_mime_type": "application/json", "temperature": 0.2}
+    )
+    response = model.generate_content(content_payload)
+    return {"status": "success", "data": json.loads(response.text)}
