@@ -91,11 +91,11 @@ async def index():
         
         <!-- 5个家庭成员槽位 -->
         <div class="profile-tabs" id="profileTabs">
-            <button type="button" class="tab-btn active" onclick="switchSlot(0)" id="tab_0">👨<br><span id="tab_name_0">本人</span></button>
-            <button type="button" class="tab-btn" onclick="switchSlot(1)" id="tab_1">👩<br><span id="tab_name_1">妻子</span></button>
+            <button type="button" class="tab-btn active" onclick="switchSlot(0)" id="tab_0">👨<br><span id="tab_name_0">男性</span></button>
+            <button type="button" class="tab-btn" onclick="switchSlot(1)" id="tab_1">👩<br><span id="tab_name_1">女性</span></button>
             <button type="button" class="tab-btn" onclick="switchSlot(2)" id="tab_2">👦<br><span id="tab_name_2">青少年</span></button>
-            <button type="button" class="tab-btn" onclick="switchSlot(3)" id="tab_3">👴<br><span id="tab_name_3">长辈1</span></button>
-            <button type="button" class="tab-btn" onclick="switchSlot(4)" id="tab_4">👵<br><span id="tab_name_4">长辈2</span></button>
+            <button type="button" class="tab-btn" onclick="switchSlot(3)" id="tab_3">👴<br><span id="tab_name_3">健康长辈</span></button>
+            <button type="button" class="tab-btn" onclick="switchSlot(4)" id="tab_4">👵<br><span id="tab_name_4">慢性病长辈</span></button>
         </div>
 
         <div style="display: flex; gap: 10px;" class="form-group">
@@ -213,11 +213,11 @@ async def index():
 
         // 预设 5 个家庭成员默认档案
         const defaultProfiles = [
-            { name: "本人", role: "成人控糖与护肝增肌", gender: "男", age: 40, height: 180, weight: 75 },
-            { name: "妻子", role: "女性抗糖抗炎与轻体", gender: "女", age: 36, height: 165, weight: 52 },
-            { name: "儿子", role: "生长发育期青少年(严查添加剂与高果糖，重钙与蛋白)", gender: "男", age: 12, height: 158, weight: 46 },
-            { name: "长辈1", role: "中老年慢病管理(稳血糖/护血管/控钠与反式脂肪)", gender: "男", age: 68, height: 170, weight: 68 },
-            { name: "长辈2", role: "中老年慢病管理(稳血糖/护血管/控钠与反式脂肪)", gender: "女", age: 66, height: 160, weight: 58 }
+            { name: "男性", role: "成人控糖与护肝增肌", gender: "男", age: 40, height: 180, weight: 75 },
+            { name: "女性", role: "女性抗糖抗炎与轻体", gender: "女", age: 36, height: 165, weight: 52 },
+            { name: "青少年", role: "生长发育期青少年(严查添加剂与高果糖，重钙与蛋白)", gender: "男", age: 12, height: 158, weight: 46 },
+            { name: "健康长辈", role: "中老年慢病管理(稳血糖/护血管/控钠与反式脂肪)", gender: "男", age: 68, height: 170, weight: 68 },
+            { name: "慢性病长辈", role: "中老年慢病管理(稳血糖/护血管/控钠与反式脂肪)", gender: "女", age: 66, height: 160, weight: 58 }
         ];
 
         let familyProfiles = [];
